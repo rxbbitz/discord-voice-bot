@@ -2,13 +2,21 @@ const { Client, GatewayIntentBits } = require("discord.js");
 const axios = require("axios");
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildVoiceStates
-  ]
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
 });
 
-const WEBHOOK_URL = process.env.WEBHOOK_URL;
+const webhookUrl = process.env.WEBHOOK_URL;
+const botToken = process.env.BOT_TOKEN;
+
+if (!webhookUrl) {
+  console.error("Missing WEBHOOK_URL environment variable");
+  process.exit(1);
+}
+
+if (!botToken) {
+  console.error("Missing BOT_TOKEN environment variable");
+  process.exit(1);
+}
 
 client.once("clientReady", () => {
   console.log(`Bot logged in as ${client.user.tag}`);
@@ -18,21 +26,19 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
   if (oldState.channelId === newState.channelId) return;
 
   try {
-    await axios.post(process.env.WEBHOOK_URL, {
+    await axios.post(webhookUrl, {
       event: "VOICE_STATE_UPDATE",
       data: {
         user_id: newState.id,
         channel_id: newState.channelId,
         channel_name: newState.channel?.name ?? null,
-        guild_id: newState.guild.id
-      }
+        guild_id: newState.guild.id,
+      },
     });
   } catch (err) {
-    console.error("Webhook error:", err.message);
+    const message = err?.response?.data ?? err.message;
+    console.error("Webhook error:", message);
   }
 });
 
-client.login(process.env.BOT_TOKEN);
-
-
-
+client.login(botToken);
